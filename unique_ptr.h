@@ -40,11 +40,12 @@ public:
     //移动赋值函数
     unique_ptr& operator=(unique_ptr&& up) noexcept
     {
-        //Todo:防止自我赋值。
+        //Todo:下面必须得处理自重复的情况，否则由于up和this一样，导致下面的reset方法先把原有的data_空间给delete掉了,
+        //但是up和this的data_空间是同一块空间，所以就会导致两个指向的data_空间被释放掉了。。。
         if(this != &up)
         {
             // data_ = up.data_;
-            //这里做了两件事:1转义
+            //这里做了两件事:1释放原有的空间，把up.data_的空间给转义给this->data_; 2把up.data_给置null
             reset(up.data_);
             up.data_ = nullptr;
         }

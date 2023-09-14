@@ -50,18 +50,29 @@ public:
     //拷贝赋值函数
     weak_ptr& operator=(const weak_ptr& wp) noexcept 
     {
-        //Todo:void swap(weak_ptr& wp) noexcept 要求是一个左值，但是这里wp是一个const weak_ptr& wp ，很可能是一个右值
-        weak_ptr tmp(wp);
-        swap(tmp);
-        //wp.reset();//无需reset
+        //Todo:这里自重复虽然不会有什么问题，但是执行了多余的代码，因此加上自重复更合适点。
+        if(this != &wp)
+        {
+            //Todo:void swap(weak_ptr& wp) noexcept 要求是一个左值，但是这里wp是一个const weak_ptr& wp ，很可能是一个右值
+            weak_ptr tmp(wp);
+            swap(tmp);
+            //wp.reset();//无需reset
+        }
+        
         return *this;
     }
 
     //移动赋值函数
     weak_ptr& operator=(weak_ptr&& wp) noexcept
     {
-        swap(wp);
-        wp.reset();
+        //Todo:由于重置会把weak_ptr本身的data_和cblock_都给置为nullptr，这就导致了wp1为空了,因此必须得处理自重复的case
+        if(this != &wp)
+        {
+             swap(wp);
+            wp.reset();
+        }
+
+       
         return *this;
     }
 

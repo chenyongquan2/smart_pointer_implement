@@ -102,6 +102,29 @@ void test_shared_ptr()
     //     shared_ptr<Base> sp2(sp1);
     // }
 
+
+    {
+        //test self copy-assign
+        shared_ptr<int> sp1(new int(1));
+        sp1=sp1;
+        assert(sp1);
+    }
+    {
+        //Todo:如果移动赋值函数没有处理自重复,则在进行swap后,
+        //下面的reset方法会把sp的引用计数-1,由于sp和this相同，此时引用计数为1，若还进行减1，则强引用计数会变为0，会导致data_被delete。
+        // shared_ptr& operator=(shared_ptr&& sp) noexcept
+        // {
+        //     swap(sp);
+        //     sp.reset();//reset it
+        //     return *this;
+        // }
+
+        //test self move-assign
+        shared_ptr<int> sp2(new int(1));
+        sp2=std::move(sp2);
+        assert(sp2);
+    }
+
 }
 
 void test_weak_ptr()
@@ -206,8 +229,31 @@ void test_weak_ptr()
         sp1.reset();
         assert(!wp1.lock());
         assert(wp1.expired());
+    }
 
+    {
+        //test self copy-assign
+        shared_ptr<int> sp1(new int(1));
+        weak_ptr<int> wp1(sp1);
+        wp1=wp1;
+        assert(wp1.lock());
+    }
 
+    {
+        //test self move-assign
+        //Todo:由于重置会把weak_ptr本身的data_和cblock_都给置为nullptr，这就导致了wp1为空了,因此必须得处理自重复的case
+        // void reset()
+        // {
+        //     dec_weak_count();
+        //     data_ = nullptr;
+        //     cblock_= nullptr;
+        // }
+        shared_ptr<int> sp1(new int(1));
+        weak_ptr<int> wp1(sp1);
+
+        wp1 = std::move(wp1);
+        assert(!wp1.expired());
+        assert(wp1.lock());
     }
 }
 
@@ -249,23 +295,6 @@ void test_unique_ptr()
     }
 
     {
-        //test move assign to it-self
-        unique_ptr<int> up1(new int(1));
-        up1=std::move(up1);
-        assert(up1);
-        assert(up1.get());
-
-        //对比标准库，下面assert是不会报错的。所以上面我们得处理一下自重复的情况。
-        {
-            //test move assign to it-self
-            std::unique_ptr<int> up1(new int(1));
-            up1=std::move(up1);
-            assert(up1);
-            assert(up1.get());
-        }
-    }
-
-    {
         //test reset to another pointer
         unique_ptr<int> up1(new int(1));
         up1.reset(new int(2));
@@ -285,6 +314,39 @@ void test_unique_ptr()
         assert(!up1);
         assert(!up1.get());
         delete data;
+    }
+
+    {
+        //test move assign to it-self
+        unique_ptr<int> up1(new int(1));
+
+        // //移动赋值函数
+        // unique_ptr& operator=(unique_ptr&& up) noexcept
+        // {
+        //     //Todo:下面必须得处理自重复的情况，否则由于up和this一样，导致下面的reset方法先把原有的data_空间给delete掉了,
+        //     //但是up和this的data_空间是同一块空间，所以就会导致两个指向的data_空间被释放掉了。。。
+        //     if(this != &up)
+        //     {
+        //         // data_ = up.data_;
+        //         //这里做了两件事:1释放原有的空间，把up.data_的空间给转义给this->data_; 2把up.data_给置null
+        //         reset(up.data_);
+        //         up.data_ = nullptr;
+        //     }
+        //     return *this;
+        // }
+
+        up1=std::move(up1);
+        assert(up1);
+        assert(up1.get());
+
+        //对比标准库，下面assert是不会报错的。所以上面我们得处理一下自重复的情况。
+        // {
+        //     //test move assign to it-self
+        //     std::unique_ptr<int> up1(new int(1));
+        //     up1=std::move(up1);
+        //     assert(up1);
+        //     assert(up1.get());
+        // }
     }
 
 }

@@ -78,17 +78,28 @@ public:
     //拷贝赋值函数
     shared_ptr& operator=(const shared_ptr& sp) noexcept
     {
-        shared_ptr tmp(sp);
-        swap(tmp);
-        //无需reset
+        if(this != &sp)
+        {
+            shared_ptr tmp(sp);
+            swap(tmp);
+            //无需reset
+        }
+        
         return *this;
     }
 
     //移动赋值函数
     shared_ptr& operator=(shared_ptr&& sp) noexcept
     {
-        swap(sp);
-        sp.reset();//reset it
+        //Todo:移动赋值函数必须得处理自重复，否则可能会导致后面的reset把引用计数减1后为0，导致data_被delete掉。
+        //Todo:如果移动赋值函数没有处理自重复,则在进行swap后,
+        //下面的reset方法会把sp的引用计数-1,由于sp和this相同，此时引用计数为1，若还进行减1，则强引用计数会变为0，会导致data_被delete。
+        if(this!=&sp)
+        {
+            swap(sp);
+            sp.reset();//reset it
+        }
+        
         return *this;
     }
 
